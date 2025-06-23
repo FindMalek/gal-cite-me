@@ -1,0 +1,12 @@
+Task,Estimated Hours,Actual Hours,Status,Notes
+"1. Ingestion Pipeline Design",1.5,,Not Started,Pseudocode design for journal file processing
+"2. Database Schema Updates",1,,Not Started,Add fields for journal metadata
+"3. Upload API Implementation",2,,Not Started,Implement /api/upload endpoint
+"4. Similarity Search API",2,,Not Started,Implement /api/similarity_search endpoint
+"5. UI Components - Chat Interface",3,,Not Started,Build chat interface with citations
+"6. UI Components - Usage Chart",2,,Not Started,Create most cited articles chart
+"7. Citation Display Logic",1.5,,Not Started,Format and display article citations
+"8. Vector DB Integration",2,,Not Started,Integrate with vector database
+"9. Testing & Debugging",2,,Not Started,End-to-end testing
+"10. Documentation & Video",1,,Not Started,Write-up and demo video
+Total,16,,Not Started, 
