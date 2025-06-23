@@ -1,9 +1,22 @@
 import { auth } from "@/app/(auth)/auth";
 import { insertChunks } from "@/app/db";
-import { JournalChunk } from "@/schema";
 import { openai } from "@ai-sdk/openai";
 import { embedMany } from "ai";
 import { NextRequest } from "next/server";
+
+interface JournalChunk {
+  id: string;
+  source_doc_id: string;
+  chunk_index: number;
+  section_heading: string;
+  doi: string;
+  journal: string;
+  publish_year: number;
+  usage_count: number;
+  attributes: string[];
+  link: string;
+  text: string;
+}
 
 export async function PUT(request: NextRequest) {
   try {

@@ -88,10 +88,7 @@ export async function deleteChunksByFilePath({
 }
 
 export async function incrementUsageCount({ chunkId }: { chunkId: string }) {
-  return await db
-    .update(chunk)
-    .set({
-      usageCount: sql`${chunk.usageCount} + 1`,
-    })
-    .where(eq(chunk.id, chunkId));
+  return await db.execute(
+    sql`UPDATE "Chunk" SET "usageCount" = COALESCE("usageCount", 0) + 1 WHERE "id" = ${chunkId}`
+  );
 }

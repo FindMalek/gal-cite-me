@@ -43,13 +43,13 @@ export async function POST(request: NextRequest) {
     // Format response to match challenge requirements
     const results = chunksWithSimilarity.map((chunkData) => ({
       id: chunkData.id,
-      source_doc_id: chunkData.sourceDocId,
-      section_heading: chunkData.sectionHeading,
-      journal: chunkData.journal,
-      publish_year: chunkData.publishYear,
-      usage_count: chunkData.usageCount,
-      attributes: chunkData.attributes,
-      link: chunkData.link,
+      source_doc_id: (chunkData as any).sourceDocId,
+      section_heading: (chunkData as any).sectionHeading,
+      journal: (chunkData as any).journal,
+      publish_year: (chunkData as any).publishYear,
+      usage_count: (chunkData as any).usageCount,
+      attributes: (chunkData as any).attributes,
+      link: (chunkData as any).link,
       text: chunkData.content,
       similarity: chunkData.similarity,
     }));
