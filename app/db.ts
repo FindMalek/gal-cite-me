@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import postgres from "postgres";
 import { genSaltSync, hashSync } from "bcrypt-ts";
 import { chat, chunk, user } from "@/schema";
@@ -9,6 +9,8 @@ import { chat, chunk, user } from "@/schema";
 // https://authjs.dev/reference/adapter/drizzle
 let client = postgres(`${process.env.POSTGRES_URL!}?sslmode=require`);
 let db = drizzle(client);
+
+export { db };
 
 export async function getUser(email: string) {
   return await db.select().from(user).where(eq(user.email, email));
@@ -83,4 +85,13 @@ export async function deleteChunksByFilePath({
   filePath: string;
 }) {
   return await db.delete(chunk).where(eq(chunk.filePath, filePath));
+}
+
+export async function incrementUsageCount({ chunkId }: { chunkId: string }) {
+  return await db
+    .update(chunk)
+    .set({
+      usageCount: sql`${chunk.usageCount} + 1`,
+    })
+    .where(eq(chunk.id, chunkId));
 }

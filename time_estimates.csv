@@ -1,12 +1,11 @@
-Task,Estimated Hours,Actual Hours,Status,Notes
-"1. Ingestion Pipeline Design",1.5,,Not Started,Pseudocode design for journal file processing
-"2. Database Schema Updates",1,,Not Started,Add fields for journal metadata
-"3. Upload API Implementation",2,,Not Started,Implement /api/upload endpoint
-"4. Similarity Search API",2,,Not Started,Implement /api/similarity_search endpoint
-"5. UI Components - Chat Interface",3,,Not Started,Build chat interface with citations
-"6. UI Components - Usage Chart",2,,Not Started,Create most cited articles chart
-"7. Citation Display Logic",1.5,,Not Started,Format and display article citations
-"8. Vector DB Integration",2,,Not Started,Integrate with vector database
-"9. Testing & Debugging",2,,Not Started,End-to-end testing
-"10. Documentation & Video",1,,Not Started,Write-up and demo video
-Total,16,,Not Started, 
+Task,Estimated Time (hours),Actual Time (hours),Status,Notes
+Understanding existing codebase,2,1.5,Complete,"Reviewed NextJS app structure auth chat file upload"
+Database schema enhancement,1,0.8,Complete,"Added journal-specific fields to chunk table"
+API endpoints development,3,2.5,Complete,"Created /api/upload and /api/similarity_search endpoints"
+RAG middleware enhancement,2,1.5,Complete,"Added citation tracking and usage count updates"
+UI components for citations,2,1.8,Complete,"Enhanced chat interface with citation display"
+Usage tracking chart,1.5,1.2,Complete,"Built Most Cited Articles chart component"
+Testing and integration,2,0.5,In Progress,"Basic functionality working need comprehensive testing"
+Documentation and cleanup,1,0.3,In Progress,"Created ingestion pipeline design document"
+Sample data and demos,1,0.5,Complete,"Created sample JSON with journal chunks"
+Migration generation,0.5,0.2,Pending,"Need to run database migration for new fields" 

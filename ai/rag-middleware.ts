@@ -1,5 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
-import { getChunksByFilePaths } from "@/app/db";
+import { getChunksByFilePaths, incrementUsageCount } from "@/app/db";
 import { openai } from "@ai-sdk/openai";
 import {
   cosineSimilarity,
@@ -95,18 +95,23 @@ export const ragMiddleware: Experimental_LanguageModelV1Middleware = {
     const k = 10;
     const topKChunks = chunksWithSimilarity.slice(0, k);
 
-    // add the chunks to the last user message
+    // Increment usage count for cited chunks
+    await Promise.all(
+      topKChunks.map((chunk) => incrementUsageCount({ chunkId: chunk.id }))
+    );
+
+    // add the chunks to the last user message with citation information
     messages.push({
       role: "user",
       content: [
         ...recentMessage.content,
         {
           type: "text",
-          text: "Here is some relevant information that you can use to answer the question:",
+          text: "Here is some relevant information that you can use to answer the question. When you use information from these sources, please cite them using the format [Source: {source_doc_id} - {section_heading}]({link}):",
         },
-        ...topKChunks.map((chunk) => ({
+        ...topKChunks.map((chunk, index) => ({
           type: "text" as const,
-          text: chunk.content,
+          text: `[CHUNK ${index + 1}]\nSource: ${chunk.sourceDocId || "Unknown"}\nSection: ${chunk.sectionHeading || "Unknown"}\nJournal: ${chunk.journal || "Unknown"}\nYear: ${chunk.publishYear || "Unknown"}\nLink: ${chunk.link || "#"}\n\nContent: ${chunk.content}\n---`,
         })),
       ],
     });
