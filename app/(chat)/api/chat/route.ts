@@ -2,6 +2,7 @@ import { auth } from "@/app/(auth)/auth";
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { customModel } from "@/ai";
+import { createMessage } from "@/app/db";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -9,7 +10,7 @@ export async function POST(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { messages, selectedFilePathnames } = await req.json();
+  const { messages, selectedFilePathnames, id } = await req.json();
 
   const result = streamText({
     model: customModel,
@@ -20,6 +21,17 @@ export async function POST(req: NextRequest) {
       files: {
         selection: selectedFilePathnames || [],
       },
+    },
+    onFinish: async ({ text }) => {
+      try {
+        await createMessage({
+          id,
+          messages: [...messages, { role: "assistant", content: text }],
+          author: session.user?.email!,
+        });
+      } catch (error) {
+        console.error("Error saving message:", error);
+      }
     },
   });
 
