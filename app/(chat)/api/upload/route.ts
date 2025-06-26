@@ -1,20 +1,17 @@
 import { auth } from "@/app/(auth)/auth";
 import { insertChunks } from "@/app/db";
-import { openai } from "@ai-sdk/openai";
 import { embedMany } from "ai";
 import { NextRequest } from "next/server";
+import { embeddingModel } from "@/ai/openai-client";
 
-interface JournalChunk {
-  id: string;
-  source_doc_id: string;
-  chunk_index: number;
-  section_heading: string;
-  doi: string;
+interface Chunk {
+  content: string;
+  sourceDocId: string;
+  sectionHeading: string;
   journal: string;
-  publish_year: number;
-  usage_count: number;
-  attributes: string[];
+  publishYear: number;
   link: string;
+  attributes: Record<string, any>;
   text: string;
 }
 
@@ -26,42 +23,30 @@ export async function PUT(request: NextRequest) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const body = await request.json();
-    const { chunks, schema_version, file_url } = body;
+    const { chunks }: { chunks: Chunk[] } = await request.json();
 
     if (!chunks || !Array.isArray(chunks)) {
       return new Response("Invalid chunks data", { status: 400 });
     }
 
-    // Validate chunk structure
-    const journalChunks: JournalChunk[] = chunks;
-    
     // Generate embeddings for all chunks
     const { embeddings } = await embedMany({
-      model: openai.embedding("text-embedding-3-small"),
-      values: journalChunks.map((chunk) => chunk.text),
+      model: embeddingModel,
+      values: chunks.map((chunk) => chunk.text),
     });
 
-    // Transform journal chunks to database format
-    const dbChunks = journalChunks.map((chunk, index) => ({
-      id: chunk.id,
-      filePath: `${session.user?.email}/${chunk.source_doc_id}`,
-      content: chunk.text,
-      embedding: embeddings[index],
-      sourceDocId: chunk.source_doc_id,
-      chunkIndex: chunk.chunk_index,
-      sectionHeading: chunk.section_heading,
-      doi: chunk.doi,
-      journal: chunk.journal,
-      publishYear: chunk.publish_year,
-      usageCount: chunk.usage_count || 0,
-      attributes: chunk.attributes,
-      link: chunk.link,
-    }));
+    // Insert chunks with embeddings into database
+    await insertChunks({
+      chunks: chunks.map((chunk, index) => ({
+        ...chunk,
+        embedding: embeddings[index],
+        author: session.user?.email || "",
+      })),
+    });
 
-    await insertChunks({ chunks: dbChunks });
-
-    return new Response(null, { status: 202 });
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Upload error:", error);
     return new Response("Internal Server Error", { status: 500 });

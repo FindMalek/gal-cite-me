@@ -1,12 +1,7 @@
 import { auth } from "@/app/(auth)/auth";
 import { getChunksByFilePaths, incrementUsageCount } from "@/app/db";
-import { openai } from "@ai-sdk/openai";
 import {
-  cosineSimilarity,
-  embed,
   Experimental_LanguageModelV1Middleware,
-  generateObject,
-  generateText,
 } from "ai";
 import { z } from "zod";
 
@@ -16,6 +11,8 @@ const selectionSchema = z.object({
     selection: z.array(z.string()),
   }),
 });
+
+
 
 export const ragMiddleware: Experimental_LanguageModelV1Middleware = {
   transformParams: async ({ params }) => {
@@ -41,7 +38,6 @@ export const ragMiddleware: Experimental_LanguageModelV1Middleware = {
         if (recentMessage) {
           messages.push(recentMessage);
         }
-
         return params;
       }
 
@@ -51,68 +47,39 @@ export const ragMiddleware: Experimental_LanguageModelV1Middleware = {
         .join("\n");
 
       // Skip RAG for very short queries
-      if (lastUserMessageContent.length < 10) {
+      if (lastUserMessageContent.length < 3) {
         messages.push(recentMessage);
         return params;
       }
-
-      // Classify the user prompt as whether it requires more context or not
-      const { object: classification } = await generateObject({
-        // fast model for classification:
-        model: openai("gpt-4o-mini", { structuredOutputs: true }),
-        output: "enum",
-        enum: ["question", "statement", "other"],
-        system: "classify the user message as a question, statement, or other",
-        prompt: lastUserMessageContent,
-      });
-
-      // only use RAG for questions
-      if (classification !== "question") {
-        messages.push(recentMessage);
-        return params;
-      }
-
-      // Use hypothetical document embeddings:
-      const { text: hypotheticalAnswer } = await generateText({
-        // fast model for generating hypothetical answer:
-        model: openai("gpt-4o-mini"),
-        system: "Answer the users question:",
-        prompt: lastUserMessageContent,
-      });
-
-      // Embed the hypothetical answer
-      const { embedding: hypotheticalAnswerEmbedding } = await embed({
-        model: openai.embedding("text-embedding-3-small"),
-        value: hypotheticalAnswer,
-      });
 
       // find relevant chunks based on the selection
+      const filePaths = selection.map((path) => `${session.user?.email}/${path}`);
+      
       const chunksBySelection = await getChunksByFilePaths({
-        filePaths: selection.map((path) => `${session.user?.email}/${path}`),
+        filePaths,
       });
 
       if (chunksBySelection.length === 0) {
-        // No chunks found, return original params
-        messages.push(recentMessage);
-        return params;
+        // No chunks found, return original params but add a note
+        messages.push({
+          role: "user",
+          content: [
+            ...recentMessage.content,
+            {
+              type: "text",
+              text: "Note: No document chunks were found for the selected files. The files may not have been processed yet or the file paths may not match. Please ensure the files have been uploaded and processed.",
+            },
+          ],
+        });
+        return { ...params, prompt: messages };
       }
 
-      const chunksWithSimilarity = chunksBySelection.map((chunk) => ({
-        ...chunk,
-        similarity: cosineSimilarity(
-          hypotheticalAnswerEmbedding,
-          chunk.embedding,
-        ),
-      }));
-
-      // rank the chunks by similarity and take the top K
-      chunksWithSimilarity.sort((a, b) => b.similarity - a.similarity);
-      const k = 5;
-      const topKChunks = chunksWithSimilarity.slice(0, k);
+      // For now, just use the first few chunks without similarity ranking
+      const topKChunks = chunksBySelection.slice(0, 5);
 
       // Increment usage count for cited chunks (but don't await to avoid blocking)
       Promise.all(
-        topKChunks.map((chunk) => incrementUsageCount({ chunkId: chunk.id }))
+        topKChunks.map((chunk: any) => incrementUsageCount({ chunkId: chunk.id }))
       ).catch(error => console.error("Error updating usage counts:", error));
 
       // add the chunks to the last user message with citation information
@@ -124,9 +91,9 @@ export const ragMiddleware: Experimental_LanguageModelV1Middleware = {
             type: "text",
             text: "Here is some relevant information that you can use to answer the question. When you use information from these sources, please cite them using the format [Source: {source_doc_id} - {section_heading}]({link}):",
           },
-          ...topKChunks.map((chunk, index) => ({
+          ...topKChunks.map((chunk: any, index: number) => ({
             type: "text" as const,
-            text: `[CHUNK ${index + 1}]\nSource: ${(chunk as any).sourceDocId || "Unknown"}\nSection: ${(chunk as any).sectionHeading || "Unknown"}\nJournal: ${(chunk as any).journal || "Unknown"}\nYear: ${(chunk as any).publishYear || "Unknown"}\nLink: ${(chunk as any).link || "#"}\n\nContent: ${chunk.content}\n---`,
+            text: `[CHUNK ${index + 1}]\nSource: ${chunk.sourceDocId || "Unknown"}\nSection: ${chunk.sectionHeading || "Unknown"}\nJournal: ${chunk.journal || "Unknown"}\nYear: ${chunk.publishYear || "Unknown"}\nLink: ${chunk.link || "#"}\n\nContent: ${chunk.content}\n\nCitation: [Source: ${chunk.sourceDocId || "Unknown"} - ${chunk.sectionHeading || "Unknown"}](${chunk.link || "#"})\n---`,
           })),
         ],
       });

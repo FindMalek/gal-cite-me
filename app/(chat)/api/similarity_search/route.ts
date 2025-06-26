@@ -1,63 +1,52 @@
 import { auth } from "@/app/(auth)/auth";
-import { db } from "@/app/db";
-import { chunk } from "@/schema";
-import { openai } from "@ai-sdk/openai";
-import { cosineSimilarity, embed } from "ai";
+import { getChunksByFilePaths } from "@/app/db";
+import { embed } from "ai";
 import { NextRequest } from "next/server";
+import { embeddingModel } from "@/ai/openai-client";
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const { query, selectedFilePathnames } = await req.json();
+
+  if (!query || !selectedFilePathnames || selectedFilePathnames.length === 0) {
+    return new Response("Missing query or file selection", { status: 400 });
+  }
+
   try {
-    const session = await auth();
-
-    if (!session?.user?.email) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    const body = await request.json();
-    const { query, k = 10, min_score = 0.25 } = body;
-
-    if (!query || typeof query !== "string") {
-      return new Response("Invalid query", { status: 400 });
-    }
-
-    // Generate embedding for the query
+    // Embed the query
     const { embedding: queryEmbedding } = await embed({
-      model: openai.embedding("text-embedding-3-small"),
+      model: embeddingModel,
       value: query,
     });
 
-    // Get all chunks for similarity comparison
-    // In a production system, you'd use a proper vector database with built-in similarity search
-    const allChunks = await db.select().from(chunk);
+    // Get chunks for selected files
+    const chunks = await getChunksByFilePaths({
+      filePaths: selectedFilePathnames.map((path: string) => `${session.user?.email}/${path}`),
+    });
 
-    // Calculate similarity scores and filter
-    const chunksWithSimilarity = allChunks
-      .map((chunkData) => ({
-        ...chunkData,
-        similarity: cosineSimilarity(queryEmbedding, chunkData.embedding),
-      }))
-      .filter((chunkData) => chunkData.similarity >= min_score)
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, k);
+    if (chunks.length === 0) {
+      return new Response(JSON.stringify({ chunks: [] }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-    // Format response to match challenge requirements
-    const results = chunksWithSimilarity.map((chunkData) => ({
-      id: chunkData.id,
-      source_doc_id: (chunkData as any).sourceDocId,
-      section_heading: (chunkData as any).sectionHeading,
-      journal: (chunkData as any).journal,
-      publish_year: (chunkData as any).publishYear,
-      usage_count: (chunkData as any).usageCount,
-      attributes: (chunkData as any).attributes,
-      link: (chunkData as any).link,
-      text: chunkData.content,
-      similarity: chunkData.similarity,
+    // Calculate similarities and sort
+    const chunksWithSimilarity = chunks.map((chunk: any) => ({
+      ...chunk,
+      similarity: queryEmbedding.reduce((sum, val, i) => sum + val * chunk.embedding[i], 0),
     }));
 
-    return Response.json({
-      query,
-      results,
-      total_found: results.length,
+    chunksWithSimilarity.sort((a: any, b: any) => b.similarity - a.similarity);
+
+    // Return top 5 most similar chunks
+    const topChunks = chunksWithSimilarity.slice(0, 5);
+
+    return new Response(JSON.stringify({ chunks: topChunks }), {
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Similarity search error:", error);

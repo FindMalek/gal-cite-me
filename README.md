@@ -1,170 +1,136 @@
-# GenAI.Labs Research Assistant
+# GenAI Labs - AI-Powered Research Assistant
 
-A full-stack research assistant powered by generative AI that enables users to ask plain-English questions and get grounded, well-sourced answers from a private archive of technical documents.
+A modern, full-stack research assistant powered by AI that enables users to ask questions about uploaded documents and get grounded, well-sourced answers.
 
-## Features
+## 🚀 Features
 
-✅ **Journal Document Upload & Processing**: Upload and process journal articles with automatic chunking and embedding generation  
-✅ **Semantic Search**: Advanced similarity search across document chunks with configurable parameters  
-✅ **AI-Powered Q&A**: Natural language question answering with proper citation and source attribution  
-✅ **Citation Display**: Automatic citation formatting with clickable links to source documents  
-✅ **Usage Tracking**: Real-time "Most Cited Articles" chart showing document usage in current session  
-✅ **Authentication**: Secure user authentication and session management  
+- **Document Upload & Processing**: Upload PDF documents with automatic chunking and embedding generation
+- **AI-Powered Q&A**: Ask natural language questions and get intelligent responses
+- **RAG (Retrieval-Augmented Generation)**: Context-aware responses with source citations
+- **Citation Tracking**: Automatic citation formatting and usage tracking
+- **Usage Analytics**: Real-time "Most Cited Articles" chart
+- **Modern UI**: Beautiful, responsive interface with dark mode support
+- **Authentication**: Secure user authentication and session management
 
-## System Architecture
+## 🏗️ Architecture
 
 ```
-Journal Files → Upload API → Chunking → Embedding → Vector DB → Search API → Chat Interface
+Document Upload → PDF Processing → Chunking → Embedding → Vector Search → RAG → AI Response
 ```
 
-## Quick Setup
+## 🛠️ Tech Stack
 
-### Prerequisites
-- Node.js 18+
-- PostgreSQL database
-- OpenAI API key
+- **Frontend**: Next.js 15, React, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, AI SDK
+- **Database**: PostgreSQL with Drizzle ORM
+- **AI Provider**: Void AI (OpenAI-compatible)
+- **File Storage**: Vercel Blob Storage
+- **Authentication**: NextAuth.js
+- **Vector Search**: Cosine similarity with PostgreSQL
 
-### Installation
+## 📦 Installation
 
-1. **Clone and install dependencies**
+1. **Clone the repository**
 ```bash
 git clone <repository-url>
 cd gal-cite-me
+```
+
+2. **Install dependencies**
+```bash
 npm install
 ```
 
-2. **Environment setup**
-Create a `.env` file with:
-```bash
-OPENAI_API_KEY=your_openai_api_key
+3. **Set up environment variables**
+Create a `.env.local` file:
+```env
+VOID_API_KEY=your_void_ai_api_key
 POSTGRES_URL=your_postgres_connection_string
 AUTH_SECRET=your_nextauth_secret
 BLOB_READ_WRITE_TOKEN=your_vercel_blob_token
 ```
 
-3. **Database setup**
+4. **Set up the database**
 ```bash
-# Generate and run migrations
 npx drizzle-kit generate
 npx drizzle-kit migrate
 ```
 
-4. **Start development server**
+5. **Start the development server**
 ```bash
 npm run dev
 ```
 
 Visit `http://localhost:3000` to access the application.
 
-## API Endpoints
+## 🔧 Configuration
 
-### `PUT /api/upload`
-Upload journal chunks with metadata and generate embeddings.
+### AI Provider Setup
+The application uses Void AI as the AI provider. To get your API key:
+1. Visit https://api.voidai.app/
+2. Sign up and get your API key
+3. Add it to your `.env.local` file as `VOID_API_KEY`
 
-**Request body:**
-```json
-{
-  "chunks": [
-    {
-      "id": "unique_chunk_id",
-      "source_doc_id": "document.pdf",
-      "chunk_index": 1,
-      "section_heading": "Introduction",
-      "doi": "10.1000/journal.doi",
-      "journal": "Journal Name",
-      "publish_year": 2023,
-      "usage_count": 0,
-      "attributes": ["keyword1", "keyword2"],
-      "link": "https://example.com/document.pdf",
-      "text": "Chunk content text..."
-    }
-  ],
-  "schema_version": "1.0"
-}
-```
+### Database Setup
+The application uses PostgreSQL with the following schema:
+- **Users**: Authentication and user management
+- **Chats**: Chat history and messages
+- **Chunks**: Document chunks with embeddings and metadata
 
-**Response:** `202 Accepted`
+## 📖 Usage
 
-### `POST /api/similarity_search`
-Perform semantic search across document chunks.
+1. **Register/Login**: Create an account or sign in
+2. **Upload Documents**: Upload PDF files through the file manager
+3. **Select Files**: Choose which documents to include in your query
+4. **Ask Questions**: Type natural language questions
+5. **View Citations**: See source citations and usage tracking
 
-**Request body:**
-```json
-{
-  "query": "What are the benefits of sustainable agriculture?",
-  "k": 10,
-  "min_score": 0.25
-}
-```
+## 🎯 Key Components
 
-**Response:**
-```json
-{
-  "query": "What are the benefits of sustainable agriculture?",
-  "results": [
-    {
-      "id": "chunk_id",
-      "source_doc_id": "document.pdf",
-      "section_heading": "Benefits Section",
-      "journal": "Agricultural Systems",
-      "publish_year": 2023,
-      "usage_count": 5,
-      "attributes": ["sustainability", "benefits"],
-      "link": "https://example.com/document.pdf",
-      "text": "Content text...",
-      "similarity": 0.85
-    }
-  ],
-  "total_found": 1
-}
-```
-
-## Usage
-
-### 1. Upload Sample Data
-Test the system using the provided sample data:
-
-```bash
-curl -X PUT http://localhost:3000/api/upload \
-  -H "Content-Type: application/json" \
-  -d @sample-journal-chunks.json
-```
-
-### 2. Test Similarity Search
-```bash
-curl -X POST http://localhost:3000/api/similarity_search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What are the benefits of velvet bean?", "k": 5}'
-```
-
-### 3. Chat Interface
-1. Register/login to the application
-2. Ask questions in natural language
-3. View citations and source references
-4. Monitor usage statistics in the sidebar chart
-
-## Key Components
-
-- **`schema.ts`**: Database schema with journal-specific fields
 - **`ai/rag-middleware.ts`**: RAG implementation with citation tracking
-- **`app/(chat)/api/upload/route.ts`**: Journal upload endpoint
-- **`app/(chat)/api/similarity_search/route.ts`**: Semantic search endpoint
-- **`components/usage-chart.tsx`**: Citation tracking visualization
-- **`components/chat.tsx`**: Main chat interface with citation display
+- **`app/(chat)/api/files/upload/route.ts`**: Document upload and processing
+- **`components/chat.tsx`**: Main chat interface
+- **`components/usage-chart.tsx`**: Citation usage visualization
+- **`schema.ts`**: Database schema definitions
 
-## Vector Database Choice: Pinecone
+## 🔍 API Endpoints
 
-**Selected: Pinecone** for production deployment due to:
-- Managed service with no infrastructure overhead
-- Excellent scalability and performance
-- Rich metadata filtering capabilities
-- Simple integration and reliable API
+- `POST /api/chat`: Main chat endpoint with RAG
+- `POST /api/files/upload`: Document upload and processing
+- `GET /api/files/list`: List uploaded files
+- `DELETE /api/files/delete`: Delete uploaded files
+- `POST /api/similarity_search`: Semantic search across documents
 
-For development, the current implementation uses PostgreSQL with cosine similarity calculations in-memory. See `INGESTION_PIPELINE.md` for detailed architectural decisions.
+## 🎨 UI Features
 
-## Time Tracking
+- **Modern Design**: Clean, professional interface
+- **Dark Mode**: Automatic theme switching
+- **Responsive**: Works on desktop and mobile
+- **Real-time Updates**: Live citation tracking
+- **File Management**: Easy document upload and selection
 
-Development progress is tracked in `time_estimates.csv` with estimated vs. actual time for each task component.
+## 🚀 Deployment
+
+The application is ready for deployment on Vercel:
+
+1. Connect your repository to Vercel
+2. Set up environment variables
+3. Deploy automatically on push
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support, please open an issue in the repository or contact the development team.
 
 ## Learn More
 

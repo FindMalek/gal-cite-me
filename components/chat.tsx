@@ -125,7 +125,7 @@ export function Chat({
         }
       });
       
-      return updated;
+      return updated.sort((a, b) => b.usage_count - a.usage_count);
     });
   };
 
